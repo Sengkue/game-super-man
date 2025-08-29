@@ -1,0 +1,14 @@
+{
+    "recommendations": [
+        "ms-vscode.cpptools",
+        "ms-vscode.cpptools-extension-pack",
+        "ms-vscode.cmake-tools",
+        "twxs.cmake",
+        "formulahendry.code-runner",
+        "ms-vscode.hexeditor",
+        "formulahendry.terminal",
+        "gruntfuggly.todo-tree",
+        "eamodio.gitlens",
+        "github.copilot"
+    ]
+}
