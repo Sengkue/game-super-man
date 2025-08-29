@@ -1,0 +1,63 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug Superman Game",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/SupermanVsGhost_debug",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "Build Debug",
+            "miDebuggerPath": "/usr/bin/gdb",
+            "linux": {
+                "MIMode": "gdb",
+                "miDebuggerPath": "/usr/bin/gdb"
+            },
+            "osx": {
+                "MIMode": "lldb"
+            },
+            "windows": {
+                "type": "cppvsdbg",
+                "program": "${workspaceFolder}\\SupermanVsGhost_debug.exe",
+                "console": "externalTerminal"
+            }
+        },
+        {
+            "name": "Run Superman Game",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/SupermanVsGhost",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "preLaunchTask": "Build Superman Game",
+            "linux": {
+                "MIMode": "gdb",
+                "miDebuggerPath": "/usr/bin/gdb"
+            },
+            "osx": {
+                "MIMode": "lldb"
+            },
+            "windows": {
+                "type": "cppvsdbg",
+                "program": "${workspaceFolder}\\SupermanVsGhost.exe",
+                "console": "externalTerminal"
+            }
+        }
+    ]
+}
