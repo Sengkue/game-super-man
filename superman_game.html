@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Superman vs Ghost Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(to bottom, #001122, #003366);
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        #gameContainer {
+            position: relative;
+            border: 3px solid #FFD700;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+        }
+
+        #gameCanvas {
+            display: block;
+            background: linear-gradient(to bottom, #001122, #002244);
+        }
+
+        #gameUI {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            z-index: 10;
+        }
+
+        .menu-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            text-align: center;
+            z-index: 100;
+        }
+
+        .menu-title {
+            font-size: 48px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #FFD700;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
+        }
+
+        .menu-button {
+            padding: 15px 30px;
+            font-size: 24px;
+            background: linear-gradient(45deg, #FF0000, #0066FF);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            margin: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+        }
+
+        .menu-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.5);
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="1200" height="800"></canvas>
+        
+        <div id="gameUI">
+            <div>Health: <span id="health">100</span>/100</div>
+            <div>Score: <span id="score">0</span></div>
+            <div>Level: <span id="level">1</span></div>
+        </div>
+
+        <div id="startMenu" class="menu-screen">
+            <div class="menu-title">SUPERMAN VS GHOST</div>
+            <div style="margin-bottom: 30px;">
+                <p>Use WASD to fly • Spacebar for Laser Vision • Click to Super Punch</p>
+                <p>Press P to Pause • Defeat all ghosts to advance!</p>
+            </div>
+            <button class="menu-button" onclick="game.startGame()">START GAME</button>
+        </div>
+
+        <div id="gameOverMenu" class="menu-screen" style="display: none;">
+            <div class="menu-title">GAME OVER</div>
+            <div style="margin-bottom: 30px;">
+                <p>Final Score: <span id="finalScore">0</span></p>
+                <p>Level Reached: <span id="finalLevel">1</span></p>
+            </div>
+            <button class="menu-button" onclick="game.restartGame()">PLAY AGAIN</button>
+        </div>
+
+        <div id="pauseMenu" class="menu-screen" style="display: none;">
+            <div class="menu-title">PAUSED</div>
+            <button class="menu-button" onclick="game.resumeGame()">RESUME</button>
+            <button class="menu-button" onclick="game.restartGame()">RESTART</button>
+        </div>
+    </div>
+
+    <script>
+        class Game {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.gameState = 'menu'; // menu, playing, paused, gameOver
+                this.score = 0;
+                this.level = 1;
+                this.particles = [];
+                this.lasers = [];
+                this.ghosts = [];
+                this.keys = {};
+                this.mouse = { x: 0, y: 0, clicked: false };
+                
+                this.superman = new Superman(this.canvas.width / 2, this.canvas.height / 2);
+                
+                this.setupEventListeners();
+                this.gameLoop();
+            }
+
+            setupEventListeners() {
+                // Keyboard events
+                document.addEventListener('keydown', (e) => {
+                    this.keys[e.key.toLowerCase()] = true;
+                    
+                    if (e.key === ' ') {
+                        e.preventDefault();
+                        if (this.gameState === 'playing') {
+                            this.fireLaser();
+                        }
+                    }
+                    
+                    if (e.key.toLowerCase() === 'p' && this.gameState === 'playing') {
+                        this.pauseGame();
+                    }
+                    
+                    if (e.key === 'Enter') {
+                        if (this.gameState === 'gameOver') {
+                            this.restartGame();
+                        }
+                    }
+                });
+
+                document.addEventListener('keyup', (e) => {
+                    this.keys[e.key.toLowerCase()] = false;
+                });
+
+                // Mouse events
+                this.canvas.addEventListener('mousemove', (e) => {
+                    const rect = this.canvas.getBoundingClientRect();
+                    this.mouse.x = e.clientX - rect.left;
+                    this.mouse.y = e.clientY - rect.top;
+                });
+
+                this.canvas.addEventListener('mousedown', (e) => {
+                    if (this.gameState === 'playing') {
+                        this.mouse.clicked = true;
+                        this.superPunch();
+                    }
+                });
+
+                this.canvas.addEventListener('mouseup', () => {
+                    this.mouse.clicked = false;
+                });
+            }
+
+            startGame() {
+                this.gameState = 'playing';
+                document.getElementById('startMenu').style.display = 'none';
+                this.spawnGhosts();
+            }
+
+            pauseGame() {
+                this.gameState = 'paused';
+                document.getElementById('pauseMenu').style.display = 'flex';
+            }
+
+            resumeGame() {
+                this.gameState = 'playing';
+                document.getElementById('pauseMenu').style.display = 'none';
+            }
+
+            restartGame() {
+                this.gameState = 'playing';
+                this.score = 0;
+                this.level = 1;
+                this.superman = new Superman(this.canvas.width / 2, this.canvas.height / 2);
+                this.ghosts = [];
+                this.lasers = [];
+                this.particles = [];
+                
+                document.getElementById('gameOverMenu').style.display = 'none';
+                document.getElementById('pauseMenu').style.display = 'none';
+                document.getElementById('startMenu').style.display = 'none';
+                
+                this.spawnGhosts();
+                this.updateUI();
+            }
+
+            spawnGhosts() {
+                this.ghosts = [];
+                const ghostCount = 3 + this.level * 2;
+                
+                for (let i = 0; i < ghostCount; i++) {
+                    const x = Math.random() * (this.canvas.width - 100) + 50;
+                    const y = Math.random() * (this.canvas.height - 100) + 50;
+                    
+                    // Ensure ghosts don't spawn too close to Superman
+                    if (Math.abs(x - this.superman.x) > 150 || Math.abs(y - this.superman.y) > 150) {
+                        const type = Math.random() < 0.7 ? 'regular' : (Math.random() < 0.8 ? 'fast' : 'boss');
+                        this.ghosts.push(new Ghost(x, y, type));
+                    } else {
+                        i--; // Try again
+                    }
+                }
+            }
+
+            fireLaser() {
+                const laser = {
+                    x: this.superman.x,
+                    y: this.superman.y,
+                    targetX: this.mouse.x,
+                    targetY: this.mouse.y,
+                    speed: 15
+                };
+                
+                const angle = Math.atan2(laser.targetY - laser.y, laser.targetX - laser.x);
+                laser.vx = Math.cos(angle) * laser.speed;
+                laser.vy = Math.sin(angle) * laser.speed;
+                
+                this.lasers.push(laser);
+                
+                // Create laser particles
+                for (let i = 0; i < 10; i++) {
+                    this.particles.push(new Particle(laser.x, laser.y, '#FF0000', 1));
+                }
+            }
+
+            superPunch() {
+                const punchRange = 100;
+                
+                for (let i = this.ghosts.length - 1; i >= 0; i--) {
+                    const ghost = this.ghosts[i];
+                    const distance = Math.sqrt(
+                        Math.pow(ghost.x - this.superman.x, 2) + 
+                        Math.pow(ghost.y - this.superman.y, 2)
+                    );
+                    
+                    if (distance < punchRange) {
+                        this.destroyGhost(i);
+                        
+                        // Create punch particles
+                        for (let j = 0; j < 15; j++) {
+                            this.particles.push(new Particle(ghost.x, ghost.y, '#FFD700', 2));
+                        }
+                    }
+                }
+            }
+
+            destroyGhost(index) {
+                const ghost = this.ghosts[index];
+                this.score += ghost.type === 'boss' ? 50 : (ghost.type === 'fast' ? 20 : 10);
+                
+                // Create explosion particles
+                for (let i = 0; i < 20; i++) {
+                    this.particles.push(new Particle(ghost.x, ghost.y, '#FFFFFF', 3));
+                }
+                
+                this.ghosts.splice(index, 1);
+                
+                // Check if level completed
+                if (this.ghosts.length === 0) {
+                    this.level++;
+                    setTimeout(() => {
+                        this.spawnGhosts();
+                    }, 1000);
+                }
+            }
+
+            update() {
+                if (this.gameState !== 'playing') return;
+
+                // Update Superman
+                this.superman.update(this.keys, this.canvas.width, this.canvas.height);
+
+                // Update ghosts
+                this.ghosts.forEach(ghost => {
+                    ghost.update(this.superman.x, this.superman.y, this.canvas.width, this.canvas.height);
+                    
+                    // Check collision with Superman
+                    const distance = Math.sqrt(
+                        Math.pow(ghost.x - this.superman.x, 2) + 
+                        Math.pow(ghost.y - this.superman.y, 2)
+                    );
+                    
+                    if (distance < 40) {
+                        this.superman.takeDamage(ghost.damage);
+                        
+                        if (this.superman.health <= 0) {
+                            this.gameOver();
+                        }
+                    }
+                });
+
+                // Update lasers
+                for (let i = this.lasers.length - 1; i >= 0; i--) {
+                    const laser = this.lasers[i];
+                    laser.x += laser.vx;
+                    laser.y += laser.vy;
+                    
+                    // Remove lasers that go off screen
+                    if (laser.x < 0 || laser.x > this.canvas.width || 
+                        laser.y < 0 || laser.y > this.canvas.height) {
+                        this.lasers.splice(i, 1);
+                        continue;
+                    }
+                    
+                    // Check laser collision with ghosts
+                    for (let j = this.ghosts.length - 1; j >= 0; j--) {
+                        const ghost = this.ghosts[j];
+                        const distance = Math.sqrt(
+                            Math.pow(ghost.x - laser.x, 2) + 
+                            Math.pow(ghost.y - laser.y, 2)
+                        );
+                        
+                        if (distance < 30) {
+                            this.destroyGhost(j);
+                            this.lasers.splice(i, 1);
+                            break;
+                        }
+                    }
+                }
+
+                // Update particles
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    const particle = this.particles[i];
+                    particle.update();
+                    
+                    if (particle.life <= 0) {
+                        this.particles.splice(i, 1);
+                    }
+                }
+
+                // Superman health regeneration
+                if (this.superman.health < 100) {
+                    this.superman.health += 0.05;
+                    if (this.superman.health > 100) this.superman.health = 100;
+                }
+
+                this.updateUI();
+            }
+
+            render() {
+                // Clear canvas
+                this.ctx.fillStyle = 'linear-gradient(to bottom, #001122, #002244)';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Draw stars background
+                this.drawStars();
+                
+                // Draw city silhouette
+                this.drawCity();
+
+                if (this.gameState === 'playing' || this.gameState === 'paused') {
+                    // Draw Superman
+                    this.superman.render(this.ctx);
+                    
+                    // Draw ghosts
+                    this.ghosts.forEach(ghost => ghost.render(this.ctx));
+                    
+                    // Draw lasers
+                    this.lasers.forEach(laser => {
+                        this.ctx.strokeStyle = '#FF0000';
+                        this.ctx.lineWidth = 3;
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(laser.x - laser.vx, laser.y - laser.vy);
+                        this.ctx.lineTo(laser.x, laser.y);
+                        this.ctx.stroke();
+                    });
+                    
+                    // Draw particles
+                    this.particles.forEach(particle => particle.render(this.ctx));
+                }
+            }
+
+            drawStars() {
+                this.ctx.fillStyle = '#FFFFFF';
+                for (let i = 0; i < 100; i++) {
+                    const x = (i * 12.34) % this.canvas.width;
+                    const y = (i * 7.89) % this.canvas.height;
+                    const size = Math.sin(Date.now() * 0.001 + i) * 0.5 + 1;
+                    this.ctx.fillRect(x, y, size, size);
+                }
+            }
+
+            drawCity() {
+                this.ctx.fillStyle = '#000011';
+                const buildings = [
+                    { x: 0, y: 600, width: 150, height: 200 },
+                    { x: 150, y: 650, width: 100, height: 150 },
+                    { x: 250, y: 550, width: 120, height: 250 },
+                    { x: 370, y: 680, width: 80, height: 120 },
+                    { x: 450, y: 600, width: 200, height: 200 },
+                    { x: 650, y: 620, width: 100, height: 180 },
+                    { x: 750, y: 580, width: 150, height: 220 },
+                    { x: 900, y: 640, width: 120, height: 160 },
+                    { x: 1020, y: 600, width: 180, height: 200 }
+                ];
+                
+                buildings.forEach(building => {
+                    this.ctx.fillRect(building.x, building.y, building.width, building.height);
+                    
+                    // Windows
+                    this.ctx.fillStyle = '#FFFF44';
+                    for (let x = building.x + 10; x < building.x + building.width - 10; x += 20) {
+                        for (let y = building.y + 10; y < building.y + building.height - 10; y += 30) {
+                            if (Math.random() > 0.7) {
+                                this.ctx.fillRect(x, y, 8, 8);
+                            }
+                        }
+                    }
+                    this.ctx.fillStyle = '#000011';
+                });
+            }
+
+            updateUI() {
+                document.getElementById('health').textContent = Math.floor(this.superman.health);
+                document.getElementById('score').textContent = this.score;
+                document.getElementById('level').textContent = this.level;
+            }
+
+            gameOver() {
+                this.gameState = 'gameOver';
+                document.getElementById('finalScore').textContent = this.score;
+                document.getElementById('finalLevel').textContent = this.level;
+                document.getElementById('gameOverMenu').style.display = 'flex';
+            }
+
+            gameLoop() {
+                this.update();
+                this.render();
+                requestAnimationFrame(() => this.gameLoop());
+            }
+        }
+
+        class Superman {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.vx = 0;
+                this.vy = 0;
+                this.health = 100;
+                this.maxHealth = 100;
+                this.speed = 5;
+                this.size = 30;
+                this.capeAnimation = 0;
+            }
+
+            update(keys, canvasWidth, canvasHeight) {
+                // Movement
+                this.vx *= 0.9; // Friction
+                this.vy *= 0.9;
+
+                if (keys['w'] || keys['arrowup']) this.vy -= this.speed * 0.3;
+                if (keys['s'] || keys['arrowdown']) this.vy += this.speed * 0.3;
+                if (keys['a'] || keys['arrowleft']) this.vx -= this.speed * 0.3;
+                if (keys['d'] || keys['arrowright']) this.vx += this.speed * 0.3;
+
+                // Apply velocity
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Keep Superman on screen
+                this.x = Math.max(this.size, Math.min(canvasWidth - this.size, this.x));
+                this.y = Math.max(this.size, Math.min(canvasHeight - this.size, this.y));
+
+                // Update cape animation
+                this.capeAnimation += 0.2;
+            }
+
+            takeDamage(damage) {
+                this.health -= damage;
+                if (this.health < 0) this.health = 0;
+            }
+
+            render(ctx) {
+                // Cape
+                ctx.fillStyle = '#CC0000';
+                const capeOffset = Math.sin(this.capeAnimation) * 5;
+                ctx.fillRect(this.x - 15 + capeOffset, this.y + 10, 10, 20);
+                
+                // Body
+                ctx.fillStyle = '#0066FF';
+                ctx.fillRect(this.x - 10, this.y - 15, 20, 30);
+                
+                // Superman logo (S)
+                ctx.fillStyle = '#FF0000';
+                ctx.fillRect(this.x - 8, this.y - 10, 16, 6);
+                ctx.fillStyle = '#FFFF00';
+                ctx.font = 'bold 12px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('S', this.x, this.y - 2);
+                
+                // Head
+                ctx.fillStyle = '#FFDBAC';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y - 20, 8, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Eyes (laser vision effect)
+                ctx.fillStyle = '#FF0000';
+                ctx.fillRect(this.x - 3, this.y - 22, 2, 1);
+                ctx.fillRect(this.x + 1, this.y - 22, 2, 1);
+                
+                // Health bar
+                const barWidth = 40;
+                const barHeight = 6;
+                const barX = this.x - barWidth / 2;
+                const barY = this.y - 40;
+                
+                ctx.fillStyle = '#FF0000';
+                ctx.fillRect(barX, barY, barWidth, barHeight);
+                
+                ctx.fillStyle = '#00FF00';
+                const healthPercent = this.health / this.maxHealth;
+                ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
+                
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(barX, barY, barWidth, barHeight);
+            }
+        }
+
+        class Ghost {
+            constructor(x, y, type = 'regular') {
+                this.x = x;
+                this.y = y;
+                this.type = type;
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = (Math.random() - 0.5) * 2;
+                this.animation = Math.random() * Math.PI * 2;
+                this.baseY = y;
+                
+                switch (type) {
+                    case 'fast':
+                        this.speed = 2;
+                        this.damage = 0.5;
+                        this.size = 25;
+                        this.color = '#CCCCFF';
+                        break;
+                    case 'boss':
+                        this.speed = 1;
+                        this.damage = 2;
+                        this.size = 40;
+                        this.color = '#FFCCCC';
+                        break;
+                    default: // regular
+                        this.speed = 1.5;
+                        this.damage = 1;
+                        this.size = 30;
+                        this.color = '#FFFFFF';
+                }
+            }
+
+            update(supermanX, supermanY, canvasWidth, canvasHeight) {
+                // AI behavior - move towards Superman
+                const dx = supermanX - this.x;
+                const dy = supermanY - this.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance > 0) {
+                    this.vx += (dx / distance) * this.speed * 0.1;
+                    this.vy += (dy / distance) * this.speed * 0.1;
+                }
+                
+                // Apply some randomness
+                this.vx += (Math.random() - 0.5) * 0.5;
+                this.vy += (Math.random() - 0.5) * 0.5;
+                
+                // Limit speed
+                const currentSpeed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                if (currentSpeed > this.speed) {
+                    this.vx = (this.vx / currentSpeed) * this.speed;
+                    this.vy = (this.vy / currentSpeed) * this.speed;
+                }
+                
+                // Apply movement
+                this.x += this.vx;
+                this.y += this.vy;
+                
+                // Floating animation
+                this.animation += 0.1;
+                this.y = this.baseY + Math.sin(this.animation) * 10;
+                
+                // Keep on screen
+                if (this.x < 0 || this.x > canvasWidth) this.vx *= -1;
+                if (this.y < 0 || this.y > canvasHeight) this.vy *= -1;
+                
+                this.x = Math.max(0, Math.min(canvasWidth, this.x));
+                this.y = Math.max(0, Math.min(canvasHeight, this.y));
+                this.baseY = this.y;
+            }
+
+            render(ctx) {
+                ctx.save();
+                ctx.globalAlpha = 0.8;
+                
+                // Ghost body
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Ghost tail (wavy bottom)
+                ctx.fillStyle = this.color;
+                for (let i = 0; i < 6; i++) {
+                    const waveX = this.x - this.size + (i * this.size / 3);
+                    const waveY = this.y + this.size - Math.sin(this.animation + i) * 5;
+                    ctx.beginPath();
+                    ctx.arc(waveX, waveY, this.size / 6, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                // Eyes
+                ctx.fillStyle = '#000000';
+                ctx.beginPath();
+                ctx.arc(this.x - 8, this.y - 5, 4, 0, Math.PI * 2);
+                ctx.arc(this.x + 8, this.y - 5, 4, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Mouth
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y + 5, 6, 0, Math.PI);
+                ctx.stroke();
+                
+                ctx.restore();
+            }
+        }
+
+        class Particle {
+            constructor(x, y, color, type = 1) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 10;
+                this.vy = (Math.random() - 0.5) * 10;
+                this.color = color;
+                this.life = 1;
+                this.decay = 0.02 * type;
+                this.size = Math.random() * 5 + 2;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vx *= 0.98;
+                this.vy *= 0.98;
+                this.life -= this.decay;
+            }
+
+            render(ctx) {
+                ctx.save();
+                ctx.globalAlpha = this.life;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size * this.life, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        // Initialize the game
+        const game = new Game();
+    </script>
+</body>
+</html>

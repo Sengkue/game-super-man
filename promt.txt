@@ -1,0 +1,165 @@
+SUPERMAN VS GHOST GAME - C++ VERSION - WARP AI PROMPT
+=====================================================
+
+Create a complete Superman vs Ghost action game using C++ with graphics library (SFML or SDL2).
+
+GAME REQUIREMENTS:
+- Superman character that can fly around the screen
+- Superman abilities: laser vision (spacebar), super punch (mouse click), flying movement (WASD keys)
+- Multiple ghost enemies that float and attack Superman
+- Visual graphics with sprites and smooth animations
+- Particle effects for attacks and explosions
+- Health system for Superman with visual health bar
+- Score system that increases when ghosts are defeated
+- Multiple levels with increasing difficulty
+- Game over and restart functionality
+
+TECHNICAL SPECIFICATIONS:
+- Use C++ programming language
+- SFML (Simple and Fast Multimedia Library) for graphics, input, and audio
+- 800x600 window resolution (resizable)
+- 60 FPS frame rate with smooth animations
+- Sprite-based graphics system
+- Sound effects and background music support
+- Memory-efficient resource management
+
+VISUAL ELEMENTS:
+- Superman sprite (blue/red colors) with cape animation frames
+- Semi-transparent ghost sprites with floating animation
+- Dark cityscape background image
+- Laser beam visual effects with particle system
+- Explosion animations when ghosts are defeated
+- UI elements: health bar, score display, level counter
+- Start screen with game title and instructions
+- Game over screen with final score and restart option
+
+CONTROLS:
+- WASD Keys: Superman movement/flying in 4 directions
+- Spacebar: Laser vision attack (ranged projectile)
+- Left Mouse Click: Super punch attack (close combat area)
+- ESC: Pause/Resume game
+- Enter: Start game / Restart after game over
+- Alt+F4: Exit game
+
+GAME MECHANICS:
+- Superman starts with 100 health points
+- Ghosts deal 10-20 damage when they collide with Superman
+- Superman slowly regenerates 1 health per second
+- Each level spawns more ghosts (level 1: 3 ghosts, level 2: 5 ghosts, etc.)
+- Ghost types: Regular Ghost (slow, 20 HP), Fast Ghost (quick, 15 HP), Boss Ghost (strong, 50 HP)
+- Boss ghost appears every 3rd level with special attack patterns
+- Player completes level by defeating all ghosts
+- Game ends when Superman's health reaches 0
+
+C++ CLASS STRUCTURE NEEDED:
+```cpp
+class Game {
+    // Main game loop, state management
+    sf::RenderWindow window;
+    GameState currentState;
+    int score, level;
+};
+
+class Superman {
+    // Player character with movement, attacks, health
+    sf::Sprite sprite;
+    sf::Vector2f position, velocity;
+    int health, maxHealth;
+    bool isAttacking;
+};
+
+class Ghost {
+    // Enemy with AI behavior and different types
+    sf::Sprite sprite;
+    sf::Vector2f position;
+    GhostType type;
+    int health;
+    float speed;
+};
+
+class Projectile {
+    // Laser beams and other projectiles
+    sf::RectangleShape shape;
+    sf::Vector2f velocity;
+    bool isActive;
+};
+
+class ParticleSystem {
+    // Visual effects for explosions and impacts
+    std::vector<Particle> particles;
+};
+```
+
+REQUIRED FILES STRUCTURE:
+```
+superman_game/
+├── main.cpp (entry point, game initialization)
+├── Game.cpp/.h (main game class)
+├── Superman.cpp/.h (player character)
+├── Ghost.cpp/.h (enemy classes)
+├── Projectile.cpp/.h (laser beams, attacks)
+├── ParticleSystem.cpp/.h (visual effects)
+├── ResourceManager.cpp/.h (texture/sound loading)
+├── Makefile or CMakeLists.txt (build configuration)
+└── assets/
+    ├── textures/
+    │   ├── superman.png
+    │   ├── ghost.png
+    │   ├── background.png
+    │   └── effects.png
+    └── sounds/
+        ├── laser.wav
+        ├── punch.wav
+        ├── ghost_death.wav
+        └── background_music.ogg
+```
+
+COMPILATION REQUIREMENTS:
+- SFML 2.5+ installed on system
+- C++17 standard or higher
+- Cross-platform compatibility (Windows/Linux/Mac)
+- Compiler: GCC, Clang, or MSVC
+
+BUILD INSTRUCTIONS:
+Provide complete build setup for:
+1. Windows (MinGW/MSVC with Visual Studio)
+2. Linux (GCC with package manager instructions)
+3. CMake configuration for cross-platform building
+
+CODE REQUIREMENTS:
+- Object-oriented design with proper encapsulation
+- Efficient memory management (smart pointers where appropriate)
+- Frame-rate independent movement using delta time
+- Collision detection using AABB (Axis-Aligned Bounding Box)
+- Resource loading with error handling
+- Game state management (Menu, Playing, Paused, GameOver)
+- Clean code with proper commenting
+- No memory leaks or undefined behavior
+
+DELIVERABLES:
+Generate complete C++ project with:
+1. All .cpp and .h files with full implementation
+2. Makefile or CMakeLists.txt for building
+3. README.md with compilation and running instructions
+4. Asset specifications (image sizes, audio formats)
+5. Code documentation explaining key classes and methods
+6. Error handling for missing files or initialization failures
+
+EXAMPLE USAGE AFTER COMPILATION:
+1. Install SFML development libraries
+2. Compile using provided build system
+3. Run executable: ./superman_game or superman_game.exe
+4. Use WASD to move Superman around the screen
+5. Press spacebar to shoot laser beams at ghosts
+6. Click mouse to perform close-combat punch attacks
+7. Complete levels by eliminating all ghost enemies
+8. Game over when Superman's health reaches zero
+
+PERFORMANCE REQUIREMENTS:
+- Maintain 60 FPS with 20+ entities on screen
+- Smooth sprite animations and particle effects
+- Responsive input handling with minimal latency
+- Efficient collision detection for multiple objects
+- Low memory footprint (under 50MB RAM usage)
+
+Please generate the complete C++ game project with all necessary files and build configuration.
